@@ -1,0 +1,28 @@
+My MPC implementation uses the current vehicle state (x,y,psi,v) with the way points to predict the actuator values (steering and acceleration).
+
+First of all a state update is done using the same kinematic model with the last actuator values to predict the state in 100ms to predict actuator values that fit 
+the latency.
+
+The kinematic model equations are:
+x1 = x0 + v * cos(psi) * dt;
+y1 = y0 + v * sin(psi) * dt;
+psi1 = psi0 + v / Lf * delta * dt;
+v1 = v0 + a * dt;
+
+Then a transformation is done from the map to the vehicle coordinates. with this the state values shall always be (0,0,0,v).
+
+Then a polynomial fitting is done to fir a 3rd order polynomial based on the transformed way points.
+
+Then the coeffs are passed to the MPC solver along with the state.
+
+The solver itself is using NLP with the lpopt library to find a solution to the optimization problem.
+
+The solver is supposed to predict actuator values along time t=N*dt. therefore, the solver shall construct the optimization problem with the corresponding number of variables and the 
+kinematic equations as the constraints.
+
+I tuned N and dt in a way that makes the time t reasonable and at the same time minimizes dt and maximizes N. i tried some other values than the current like (10*0.1) and (20*0.5).
+
+The solver returns the first solution which means, only the actuator values for the current time stamp. given that the state itself was updated based on the kinematic model,
+the predicted MPC values should already fit the latency.
+
+The solution is testd using the simulator and the vehicle does not leave the track.
